@@ -8,7 +8,6 @@ CREATE INDEX reactions_livestream_id_idx on reactions (livestream_id);
 CREATE INDEX reservation_slots_start_at_end_at_idx on reservation_slots (start_at, end_at);
 CREATE INDEX ng_words_use_id_livestream_id_idx on ng_words (user_id, livestream_id);
 CREATE INDEX reservation_slots_end_at_idx on reservation_slots (end_at);
-CREATE INDEX reservation_slots_start_at_idx on reservation_slots (start_at);
 
 
 -- isudns
