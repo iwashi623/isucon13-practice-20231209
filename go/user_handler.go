@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -96,8 +97,8 @@ func getIconHandler(c echo.Context) error {
 	}
 	defer tx.Rollback()
 
-	var user UserModel
-	if err := tx.GetContext(ctx, &user, "SELECT * FROM users WHERE name = ?", username); err != nil {
+	var userId int
+	if err := tx.GetContext(ctx, &userId, "SELECT id FROM users WHERE name = ?", username); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return echo.NewHTTPError(http.StatusNotFound, "not found user that has the given username")
 		}
@@ -105,7 +106,7 @@ func getIconHandler(c echo.Context) error {
 	}
 
 	var image []byte
-	if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", user.ID); err != nil {
+	if err := tx.GetContext(ctx, &image, "SELECT image FROM icons WHERE user_id = ?", userId); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return c.File(fallbackImage)
 		} else {
@@ -113,6 +114,15 @@ func getIconHandler(c echo.Context) error {
 		}
 	}
 
+	// 画像のハッシュを計算
+	iconHash := sha256.Sum256(image)
+	clientIconHash := c.Request().Header.Get("If-None-Match")
+	// clientIconHashの""をトリムする
+	clientIconHash = strings.Trim(clientIconHash, "\"")
+	// ハッシュが一致したら304を返す
+	if clientIconHash == fmt.Sprintf("%x", iconHash) {
+		return c.NoContent(http.StatusNotModified)
+	}
 	return c.Blob(http.StatusOK, "image/jpeg", image)
 }
 
